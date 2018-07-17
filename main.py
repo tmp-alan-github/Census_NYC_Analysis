@@ -4,7 +4,7 @@ from pprint import pprint
 import pandas as pd
 
 from count_incidents import count_borough_incidents, count_zip_incidents
-from util import clean_strings, clean_to_int
+from util import clean_string, clean_to_int, string_similarity
 
 
 def json_url_to_dataframe():
@@ -16,8 +16,19 @@ def json_url_to_dataframe():
 	return dataframe
 
 
+def handle_similarity_debug( set_tmp ):
+	if len(set_tmp) > 0:
+		string_similarity(set_tmp)
+	else:
+		print("Buffer from other commands needed before this process can begin!")
+
+
+
+
 # Primary counting logic of the user's chosen attribute.
-def counter_processing( size, zip_root ):
+def counter_processing( zip_root, sanitize_dev=False ):
+	word_set_diff = set()
+
 	pd.set_option('display.max_columns', 100000)
 
 	d = json_url_to_dataframe()
@@ -31,8 +42,13 @@ def counter_processing( size, zip_root ):
 		b = d.loc[row, 'borough']
 
 		z = clean_to_int(z)
-		c = clean_strings(c)
-		b = clean_strings(b)
+		c = clean_string(c)
+		b = clean_string(b)
+
+		word_set_diff.add(b)
+		word_set_diff.add(c)
+
+
 
 		print(b, " - ", c, " - ", z)
 
@@ -41,9 +57,14 @@ def counter_processing( size, zip_root ):
 		elif ('unspecified' not in b):  # Option 2
 			nested_dict[b][c] += 1
 
+
 	print("\n" * 5, " -------- \n")
 	pprint(dict(nested_dict))  # Print out final structure
 
+	# Kicks off fuzzy-wuzzy checking (Option 5)
+	if sanitize_dev:
+		print("\n\n-- FUZZY CHECKING --")
+		handle_similarity_debug(word_set_diff)
 
 # Start the program and menu system, main call
 if __name__ == "__main__":
@@ -51,22 +72,24 @@ if __name__ == "__main__":
 	print("\n---Written by Alan Steinberg---\n")
 
 	while (True):
-		print("\n1.Aggregate incidents per zip code")
+		print("\n1. Aggregate incidents per zip code")
 		print("2. Aggregate incidents per boroughs")
 		print("3. Analyze incidents per 10k capita by zip")
 		print("4. Analyze incidents per 10k capita  by Borough")
+		print("5. (DEV) - String Similarity Comparison FuzzyWuzzy")
 
-		kb_user = input(" Enter Choice:").lower().strip()  #Menu needs some cleaning up, too much redundnacy.
+		kb_user = input("Enter Choice: ").lower().strip()  #Menu needs some cleaning up, too much redundnacy.
 		if (kb_user == "1"):
 			zip_root = True
-			counter_processing(1, zip_root)
+			counter_processing(zip_root)
 		elif (kb_user == "2"):
 			zip_root = False
-			counter_processing(1, zip_root)
+			counter_processing(zip_root)
 		elif (kb_user == "3"):
-			count_zip_incidents('data/311.csv', )
+			count_zip_incidents('data/311.csv', )  #to be fixed
 		elif (kb_user == "4"):
-			count_borough_incidents('data/311.csv', )
+			count_borough_incidents('data/311.csv', )  # to be fixed
+		elif (kb_user == "5"):
+			counter_processing(zip_root, sanitize_dev=True)
 		else:
-			print("Bad input! Either (1,2,3,4) are to be chosen.")
-	counter_processing(1, zip_root)
+			print("Bad input! Either (1,2,3,4,5) are to be chosen.")
