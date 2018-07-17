@@ -1,91 +1,72 @@
-import csv
-from numpy import ones, dtype, array, NaN
-import pandas as pd
-from time import time
-from pprint import pprint
 from collections import defaultdict, Counter
+from pprint import pprint
+
+import pandas as pd
+
 from count_incidents import count_borough_incidents, count_zip_incidents
+from util import clean_strings, clean_to_int
 
 
-def write_set( zipset ):
-	with open('nyc_zips.txt', 'w') as f:
-		for i in zipset:
-			f.write(str(i) + "\n")
+def json_url_to_dataframe():
+	# URL takes advantage of 'floating timestamps' that query between two dates (2017), possible to push this further in hopes of limiting scope
+	# Then is shoved into a dataframe to be return back to counter method
+	url = 'https://data.cityofnewyork.us/resource/fhrw-4uyv.json?$where=due_date%20between%20%272017-01-01T12:19:54.000%27%20and%20%272017-12-31T12:19:54.000%27'
+	dataframe = pd.read_json(url, orient="columns")
+	dataframe = pd.DataFrame.from_records(dataframe)
+	return dataframe
 
 
-def write_dict_to_csv( tmp_dict, out_f="output.csv" ):
-	with open(out_f, 'w') as f:  # Just use 'w' mode in 3.x
-		w = csv.DictWriter(f, tmp_dict.keys())
-		w.writeheader()
-		w.writerow(tmp_dict)
+# Primary counting logic of the user's chosen attribute.
+def counter_processing( size, zip_root ):
+	pd.set_option('display.max_columns', 100000)
+
+	d = json_url_to_dataframe()
+
+	nested_dict = defaultdict(Counter)
+
+	# Primary loop to locate, and increment. Cleanse functions are used here.
+	for row in range(len(d)):
+		z = d.loc[row, 'incident_zip']
+		c = d.loc[row, 'complaint_type']
+		b = d.loc[row, 'borough']
+
+		z = clean_to_int(z)
+		c = clean_strings(c)
+		b = clean_strings(b)
+
+		print(b, " - ", c, " - ", z)
+
+		if (zip_root):  # Option 1 at menu (Zip is parent/root)
+			nested_dict[z][c] += 1
+		elif ('unspecified' not in b):  # Option 2
+			nested_dict[b][c] += 1
+
+	print("\n" * 5, " -------- \n")
+	pprint(dict(nested_dict))  # Print out final structure
 
 
-# MAIN Parsing logic - ending results in CSV created to map Zip Codes, Incident Occurences
-def preprocessing_csv( in_f, size, is_zip_root ):
-	start_timer = time()
-	zip_set = set()
-
-	# Default dict with a collection counter to assist
-	master_dict = defaultdict(lambda: defaultdict(lambda: Counter()))
-
-	# Much room for improvement among these parameters
-	reader = pd.read_csv(in_f, sep=',', skip_blank_lines=True, memory_map=True, chunksize=size)
-	for chunk in reader:
-		complaint = str(chunk['Complaint Type'].values[0]).split(",")[0].strip().replace("DOF", '')
-		if (is_zip_root):
-			zip = str(chunk['Incident Zip'].values[0]).split(",")[0].strip()
-			root = zip
-		else:
-			borough = str(chunk['Borough'].values[0]).strip()
-			root = borough
-
-		if ("nan" not in root.lower() and "unspecified" not in root.lower()):
-			try:
-				if root in zip_set:
-					master_dict[root][complaint] += 1
-				else:
-					master_dict[root] = {complaint: 1}
-					zip_set.add((root))
-			except KeyError:
-				# print("KEY ERROR", master_dict[root])
-				# print(root, " ", complaint)
-				master_dict[root][complaint] = 1  # print(root, " ", complaint)
-
-		# Refresh Rate of Prints (.5 seconds)
-		if time() - start_timer > .5:
-			pprint(dict(master_dict))
-			start_timer = time()
-
-	# Write dictionary accumulated into csv upon completion of parsing
-	if (is_zip_root):
-		write_set(zip_set)
-		write_dict_to_csv(master_dict)
-
-# Start the function call
-def main():
+# Start the program and menu system, main call
+if __name__ == "__main__":
 	zip_root = None
 	print("\n---Written by Alan Steinberg---\n")
+
 	while (True):
-		print("\n1. Aggregate incidents per zip code")
+		print("\n1.Aggregate incidents per zip code")
 		print("2. Aggregate incidents per boroughs")
 		print("3. Analyze incidents per 10k capita by zip")
 		print("4. Analyze incidents per 10k capita  by Borough")
 
-		kb_user = input("   Enter Choice:").lower().strip()
-
+		kb_user = input(" Enter Choice:").lower().strip()  #Menu needs some cleaning up, too much redundnacy.
 		if (kb_user == "1"):
 			zip_root = True
-			break
+			counter_processing(1, zip_root)
 		elif (kb_user == "2"):
 			zip_root = False
-			break
+			counter_processing(1, zip_root)
 		elif (kb_user == "3"):
 			count_zip_incidents('data/311.csv', )
 		elif (kb_user == "4"):
 			count_borough_incidents('data/311.csv', )
 		else:
 			print("Bad input! Either (1,2,3,4) are to be chosen.")
-		preprocessing_csv("data/311.csv", 1, zip_root)
-
-
-main()
+	counter_processing(1, zip_root)
