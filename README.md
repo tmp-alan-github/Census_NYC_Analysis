@@ -2,7 +2,7 @@
 ### Using government provided data to analyze certain metrics and stats concerning incidents reported in NYC.
 
 
-#### [TODO/Improvements](https://github.com/tmp-alan-github/Census_NYC_Analysis/blob/master/todo.md)
+#### [TODO/Improvements](https://github.com/tmp-alan-github/Census_NYC_Analysis/blob/master/TODO.md)
 
 ### Installation Tips
 The script is developed in python3, mostly tested in an EC2 Instance.
