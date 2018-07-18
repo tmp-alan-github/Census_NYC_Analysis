@@ -1,5 +1,5 @@
 #                                                         Census_NYC_Analysis
-### Using government provided data, namely a bulky csv, to analyze certain metrics and stats concerning incidents reported in NYC.
+### Using government provided data to analyze certain metrics and stats concerning incidents reported in NYC.
 
 
 #### [TODO/Improvements](https://github.com/tmp-alan-github/Census_NYC_Analysis/blob/master/todo.md)
@@ -11,15 +11,10 @@ Make sure dependancies like pandas and numpy are installed.
 
 Use tmux/screen to allow for the script to behave in the background, especially considering the 10Gb file that it awaits.
 
-Some steps and method to get the CSV that is being parsed through:
+Cloning the git and running the script:
 ```
-cd ~
 git clone https://github.com/tmp-alan-github/Census_NYC_Analysis.git
-mkdir data
-cd data
-wget https://data.cityofnewyork.us/api/views/erm2-nwe9/rows.csv
-cd ..
-python3 main.py
+python3 Census_NYC_Analysis/main.py
 ```
 ##### Possible options
 ```
@@ -27,6 +22,7 @@ python3 main.py
 2. Aggregate incidents per boroughs
 3. Analyze incidents per 10k capita by zip
 4. Analyze incidents per 10k capita or by Borough
+5. (DEV) - String Similarity Comparison FuzzyWuzzy
 ```
 
 <div align='center'>

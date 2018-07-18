@@ -16,47 +16,42 @@ def json_url_to_dataframe():
 	return dataframe
 
 
+# Helper function, likely to be removed
 def handle_similarity_debug( set_tmp ):
 	if len(set_tmp) > 0:
 		string_similarity(set_tmp)
-	else:
-		print("Buffer from other commands needed before this process can begin!")
-
 
 
 
 # Primary counting logic of the user's chosen attribute.
-def counter_processing( zip_root, sanitize_dev=False ):
-	word_set_diff = set()
+def counter_processing( dataframe, is_zip_root, sanitize_dev=False ):
+	word_set_diff = set()  # Used for storing words/phrases to later be similarilty checked
 
 	pd.set_option('display.max_columns', 100000)
 
-	d = json_url_to_dataframe()
-
+	# Dict to aggregate counts
 	nested_dict = defaultdict(Counter)
 
 	# Primary loop to locate, and increment. Cleanse functions are used here.
 	for row in range(len(d)):
-		z = d.loc[row, 'incident_zip']
-		c = d.loc[row, 'complaint_type']
-		b = d.loc[row, 'borough']
 
-		z = clean_to_int(z)
-		c = clean_string(c)
-		b = clean_string(b)
+		zip = d.loc[row, 'incident_zip']
+		complaint = d.loc[row, 'complaint_type']
+		borough = d.loc[row, 'borough']
 
-		word_set_diff.add(b)
-		word_set_diff.add(c)
+		zip = clean_to_int(zip)
+		complaint = clean_string(complaint)
+		borough = clean_string(borough)
 
+		word_set_diff.add(borough)
+		word_set_diff.add(complaint)
 
+		print(borough, " - ", complaint, " - ", zip)  # Raw print as rows iterate
 
-		print(b, " - ", c, " - ", z)
-
-		if (zip_root):  # Option 1 at menu (Zip is parent/root)
-			nested_dict[z][c] += 1
-		elif ('unspecified' not in b):  # Option 2
-			nested_dict[b][c] += 1
-
+		if (is_zip_root):  # Option 1 at menu (Zip is parent/root)
+			nested_dict[zip][complaint] += 1
+		elif ('unspecified' not in borough):  # Option 2  - with unspecified check
+			nested_dict[borough][complaint] += 1
 
 	print("\n" * 5, " -------- \n")
 	pprint(dict(nested_dict))  # Print out final structure
@@ -66,11 +61,12 @@ def counter_processing( zip_root, sanitize_dev=False ):
 		print("\n\n-- FUZZY CHECKING --")
 		handle_similarity_debug(word_set_diff)
 
+
 # Start the program and menu system, main call
 if __name__ == "__main__":
-	zip_root = None
+	is_zip_root = None
 	print("\n---Written by Alan Steinberg---\n")
-
+	d = json_url_to_dataframe()
 	while (True):
 		print("\n1. Aggregate incidents per zip code")
 		print("2. Aggregate incidents per boroughs")
@@ -78,18 +74,18 @@ if __name__ == "__main__":
 		print("4. Analyze incidents per 10k capita  by Borough")
 		print("5. (DEV) - String Similarity Comparison FuzzyWuzzy")
 
-		kb_user = input("Enter Choice: ").lower().strip()  #Menu needs some cleaning up, too much redundnacy.
+		kb_user = input("Enter Choice: ").lower().strip()  # Menu needs some cleaning up, too much redundnacy.
 		if (kb_user == "1"):
-			zip_root = True
-			counter_processing(zip_root)
+			is_zip_root = True
+			counter_processing(d, is_zip_root)
 		elif (kb_user == "2"):
-			zip_root = False
-			counter_processing(zip_root)
+			is_zip_root = False
+			counter_processing(d, is_zip_root)
 		elif (kb_user == "3"):
-			count_zip_incidents('data/311.csv', )  #to be fixed
+			count_zip_incidents(d)  # to be fixed
 		elif (kb_user == "4"):
-			count_borough_incidents('data/311.csv', )  # to be fixed
+			count_borough_incidents(d)  # to be fixed
 		elif (kb_user == "5"):
-			counter_processing(zip_root, sanitize_dev=True)
+			counter_processing(is_zip_root, sanitize_dev=True)
 		else:
 			print("Bad input! Either (1,2,3,4,5) are to be chosen.")
