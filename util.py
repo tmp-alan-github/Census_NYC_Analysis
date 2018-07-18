@@ -1,21 +1,31 @@
+import glob
 import unicodedata
+from os.path import getsize
 
+import requests
 from fuzzywuzzy import fuzz
 
 
 # Early and primative sanitizing of inputs
-def clean_to_int( num ):
+def verify_clean_zip( num ):
 	try:
-		tmp = int(num)
-		if (len(str(tmp)) == 5):
-			return tmp
+		zip_tmp = int(num)
+		# Min,Max of ranges shown by DoH - ZIP Code Definitions https://on.ny.gov/1RnUmTz
+		# Below if to check length is proper and that zip is within NYC ranges
+		if len(str(zip_tmp)) == 5 and (10001 <= zip_tmp and zip_tmp <= 11697):
+			return zip_tmp
+		elif (10001 > zip_tmp or zip_tmp > 11697):
+			print(zip_tmp, " NOT ZIP CODE WITHIN NYC RANGE ")
 		else:
-			print(tmp, " NOT ZIP CODE LENGTH ", len(tmp))
-			raise Exception
-	except Exception as e:  # Still looking into this
-		tmp = int(str(num).strip().isnumeric())
-		print("BAD NUM:", tmp, " Original : ", num)
+			print(zip_tmp, " NOT ZIP CODE OF LENGTH 5: ", len(zip_tmp))
 
+	except Exception as e:  # Still looking into this
+		zip_tmp = int(str(num).strip().isnumeric())
+		print("BAD ZIP:", zip_tmp, " Original : ", num)
+
+
+def attempt_borough_from_zip( zip ):
+	pass  # Working on
 
 # Multiple bombs dropped on misbehaving strings (and still more to come)
 def clean_string( st ):
@@ -39,8 +49,6 @@ def string_similarity( word_set ):
 	print("\n\n")
 
 
-
-
 # Write out functions, will find more use for them in staging and potential cache scenarios.
 def write_set( zipset ):
 	with open('nyc_zips.txt', 'w') as f:
@@ -53,3 +61,28 @@ def write_dict_to_csv( tmp_dict, out_f="output.csv" ):
 		w = csv.DictWriter(f, tmp_dict.keys())
 		w.writeheader()
 		w.writerow(tmp_dict)
+
+
+def download_jsons():
+	for i in range(100):  # range 100 is arbitrarly high, break occurs at about 23~
+		# URL takes advantage of 'floating timestamps' that query between two dates (2017) and only selects what is needed
+		url = 'https://data.cityofnewyork.us/resource/fhrw-4uyv.json?$query=SELECT%20incident_zip,due_date,borough,complaint_type%20WHERE%20due_date%20between%20%272017-01-01T12:19:54.000%27%20and%20%272017-12-30T12:19:54.000%27%20LIMIT%2050000%20OFFSET%20'
+		# Downloaded in increments because of 50k line limit, break upon smaller file increment
+		url_offset = url + str(i * 50000)
+		response = requests.get(url_offset, stream=True)
+		handle = open(f'data/data{i}.json', "wb")
+		print(f'Downloading data{i}.json ...')
+		for chunk in response.iter_content(chunk_size=512):
+			if chunk and len(chunk) > 3:  # filter out keep-alive new chunks
+				handle.write(chunk)
+		if getsize(f'data/data{i}.json') < (1024 * 1024 * 4):  # Last increment if below 4mb
+			break
+	print("Finished Download Increments")
+
+
+def get_jsons_list():  # Retrieve list of jsons, if none then download
+	read_files = glob.glob("data/data*.json")
+	if not read_files:
+		print("Data is not found! Downloading JSONs")
+		download_jsons()
+	return glob.glob("data/data*.json")
