@@ -23,6 +23,7 @@ python3 Census_NYC_Analysis/main.py
 3. Analyze incidents per 10k capita by zip
 4. Analyze incidents per 10k capita or by Borough
 5. (DEV) - String Similarity Comparison FuzzyWuzzy
+6. (DEV) - Force JSON downloads
 ```
 
 <div align='center'>
