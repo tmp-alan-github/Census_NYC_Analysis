@@ -34,12 +34,14 @@ def count_zip_incidents( dataframe ):
 		try:
 			# Grab population from zip csv, then do per 10k people on the incidents each zip
 			zip_pop = float(str(get_population_from_zip(zip_tmp)).strip())
+			if zip_pop < 10:  ##Low population skews results too much, filtering with min of 10
+				zip_pop = 0.0
 			zip_counter[zip_tmp] = (float(zip_counter[zip_tmp]) / (zip_pop)) * 10000.0
 		except Exception as e:
-			print(e, zip_tmp)
+			pass
 	print("\n -  Sorted by most complaint/population per 10k people (top 20) - \n")
-	for w in sorted(zip_counter, key=zip_counter.get, reverse=True)[0:20]:
+	for w in sorted(zip_counter, key=zip_counter.get, reverse=True)[0:20]:  # Sort, grab top 20
 		try:
 			print(int(w), " - ", '{0:.3f}'.format(zip_counter[w]))
 		except Exception as e:
-			print(e, "Bad zip : ", w)
+			print(e, "Bad zip : ", w)  #Rare

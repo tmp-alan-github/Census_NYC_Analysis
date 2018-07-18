@@ -1,3 +1,4 @@
+import csv
 import glob
 import unicodedata
 from os.path import getsize
@@ -15,22 +16,33 @@ def verify_clean_zip( num ):
 		if len(str(zip_tmp)) == 5 and (10001 <= zip_tmp and zip_tmp <= 11697):
 			return zip_tmp
 		elif (10001 > zip_tmp or zip_tmp > 11697):
-			print(zip_tmp, " NOT ZIP CODE WITHIN NYC RANGE ")
+			print("BAD ZIP CODE NOT WITHIN NYC RANGE :", zip_tmp)
 		else:
-			print(zip_tmp, " NOT ZIP CODE OF LENGTH 5: ", len(zip_tmp))
+			print("BAD ZIP:", zip_tmp, " NOT ZIP CODE OF LENGTH 5: ", len(zip_tmp))
 
-	except Exception as e:  # Still looking into this
+	except Exception as e:  # Cannot clean zips, FUBARd
 		zip_tmp = int(str(num).strip().isnumeric())
 		print("BAD ZIP:", zip_tmp, " Original : ", num)
 
 
 def attempt_borough_from_zip( zip ):
-	pass  # Working on
+	zip = str(zip)
+	f = open('data/borough_zip.csv')
+	csv_f = csv.reader(f)
+	for row in csv_f:
+		if (zip == str(row[0]).strip()):
+			print("Cross-referenced bad borough:", row)
+			return str(row[1])
+	f.close()
+	return None
 
 # Multiple bombs dropped on misbehaving strings (and still more to come)
 def clean_string( st ):
-	s = st.lower().strip().replace("dof", "").replace("  ", "")
-	s = s.translate(str.maketrans("", "", ",.-'\"():;+/?$°@"))
+	s = st.lower().strip().replace("dof", "").replace("  ", "")  # two spaces in the replace arg0
+	try:
+		s = s.translate(str.maketrans("", "", ",.-'\"():;+/?$°@"))
+	except Exception as e:
+		print("TRANSLATE ERROR:", st, s, e)  #Rare to occur
 	s = ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
 	return s
 
@@ -70,12 +82,12 @@ def download_jsons():
 		# Downloaded in increments because of 50k line limit, break upon smaller file increment
 		url_offset = url + str(i * 50000)
 		response = requests.get(url_offset, stream=True)
-		handle = open(f'data/data{i}.json', "wb")
-		print(f'Downloading data{i}.json ...')
+		handle = open('data/data' + str(i) + '.json', "wb")
+		print('Downloading data' + str(i) + '.json ...')
 		for chunk in response.iter_content(chunk_size=512):
 			if chunk and len(chunk) > 3:  # filter out keep-alive new chunks
 				handle.write(chunk)
-		if getsize(f'data/data{i}.json') < (1024 * 1024 * 4):  # Last increment if below 4mb
+		if getsize('data/data' + str(i) + '.json') < (1024 * 1024 * 4):  # Last increment if below 4mb (below 50k lines)
 			break
 	print("Finished Download Increments")
 
